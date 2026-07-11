@@ -21,6 +21,8 @@ from bot import db
 log = logging.getLogger(__name__)
 
 CHECK_INTERVAL_SECONDS = 30
+SET_COLOR = discord.Color.blurple()
+FIRED_COLOR = discord.Color.orange()
 
 _UNIT_SECONDS = {
     "s": 1, "sec": 1, "secs": 1, "second": 1, "seconds": 1,
@@ -68,12 +70,19 @@ class Reminders(commands.Cog):
             return
 
         remind_at = discord.utils.utcnow() + delta
+        embed = discord.Embed(color=SET_COLOR)
+        embed.set_author(
+            name=f"{interaction.user.display_name} set a reminder",
+            icon_url=interaction.user.display_avatar.url,
+        )
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        embed.add_field(name="Message", value=message, inline=False)
+        embed.add_field(name="Fires", value=discord.utils.format_dt(remind_at), inline=True)
+
         # Not ephemeral: the interaction token needed to reply to an ephemeral
         # response expires in 15 minutes, long before most reminders fire.
         # A real channel message can be referenced by ID indefinitely.
-        await interaction.response.send_message(
-            f"Got it - I'll remind you at {discord.utils.format_dt(remind_at)}"
-        )
+        await interaction.response.send_message(embed=embed)
         sent = await interaction.original_response()
         await db.create_reminder(
             self.bot.pool,
@@ -95,9 +104,21 @@ class Reminders(commands.Cog):
                     channel_id=row["channel_id"],
                     fail_if_not_exists=False,
                 )
+                embed = discord.Embed(title="⏰ Reminder", color=FIRED_COLOR)
+                embed.description = row["message"]
+                user = self.bot.get_user(row["user_id"])
+                if user is None:
+                    try:
+                        user = await self.bot.fetch_user(row["user_id"])
+                    except discord.HTTPException:
+                        user = None
+                if user is not None:
+                    embed.set_thumbnail(url=user.display_avatar.url)
                 try:
+                    # The mention has to be in plain content, not the embed —
+                    # Discord doesn't send a ping for mentions inside embeds.
                     await channel.send(
-                        f"⏰ <@{row['user_id']}> - {row['message']}", reference=reference
+                        content=f"<@{row['user_id']}>", embed=embed, reference=reference
                     )
                 except discord.HTTPException:
                     log.exception("Failed to deliver reminder %d", row["id"])
