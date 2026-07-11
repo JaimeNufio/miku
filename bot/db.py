@@ -25,11 +25,13 @@ CREATE TABLE IF NOT EXISTS reminders (
     id          BIGSERIAL PRIMARY KEY,
     guild_id    BIGINT NOT NULL,
     channel_id  BIGINT NOT NULL,
+    message_id  BIGINT NOT NULL,
     user_id     BIGINT NOT NULL,
     message     TEXT NOT NULL,
     remind_at   TIMESTAMPTZ NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS message_id BIGINT;
 CREATE INDEX IF NOT EXISTS reminders_remind_at_idx ON reminders (remind_at);
 """
 
@@ -83,18 +85,20 @@ async def create_reminder(
     pool: asyncpg.Pool,
     guild_id: int,
     channel_id: int,
+    message_id: int,
     user_id: int,
     message: str,
     remind_at: datetime.datetime,
 ) -> int:
     return await pool.fetchval(
         """
-        INSERT INTO reminders (guild_id, channel_id, user_id, message, remind_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO reminders (guild_id, channel_id, message_id, user_id, message, remind_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
         """,
         guild_id,
         channel_id,
+        message_id,
         user_id,
         message,
         remind_at,
@@ -103,7 +107,7 @@ async def create_reminder(
 
 async def due_reminders(pool: asyncpg.Pool) -> list[asyncpg.Record]:
     return await pool.fetch(
-        "SELECT id, channel_id, user_id, message FROM reminders WHERE remind_at <= now()"
+        "SELECT id, channel_id, message_id, user_id, message FROM reminders WHERE remind_at <= now()"
     )
 
 

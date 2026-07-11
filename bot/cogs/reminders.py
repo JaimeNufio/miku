@@ -68,17 +68,21 @@ class Reminders(commands.Cog):
             return
 
         remind_at = discord.utils.utcnow() + delta
+        # Not ephemeral: the interaction token needed to reply to an ephemeral
+        # response expires in 15 minutes, long before most reminders fire.
+        # A real channel message can be referenced by ID indefinitely.
+        await interaction.response.send_message(
+            f"Got it - I'll remind you at {discord.utils.format_dt(remind_at)}"
+        )
+        sent = await interaction.original_response()
         await db.create_reminder(
             self.bot.pool,
             interaction.guild_id,
             interaction.channel_id,
+            sent.id,
             interaction.user.id,
             message,
             remind_at,
-        )
-        await interaction.response.send_message(
-            f"Got it — I'll remind you {discord.utils.format_dt(remind_at, 'R')}.",
-            ephemeral=True,
         )
 
     @tasks.loop(seconds=CHECK_INTERVAL_SECONDS)
@@ -86,8 +90,15 @@ class Reminders(commands.Cog):
         for row in await db.due_reminders(self.bot.pool):
             channel = self.bot.get_channel(row["channel_id"])
             if channel is not None:
+                reference = discord.MessageReference(
+                    message_id=row["message_id"],
+                    channel_id=row["channel_id"],
+                    fail_if_not_exists=False,
+                )
                 try:
-                    await channel.send(f"<@{row['user_id']}> ⏰ {row['message']}")
+                    await channel.send(
+                        f"⏰ <@{row['user_id']}> - {row['message']}", reference=reference
+                    )
                 except discord.HTTPException:
                     log.exception("Failed to deliver reminder %d", row["id"])
             await db.delete_reminder(self.bot.pool, row["id"])
