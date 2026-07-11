@@ -1,0 +1,18 @@
+# Guilds and channels the bot will respond in.
+#
+# - Slash commands are synced only to the guilds listed here.
+# - If a guild's `channels` list is empty or omitted, every channel in that
+#   guild is allowed. Otherwise only the listed channel IDs are allowed.
+# - `name` fields are informational only (for humans reading this file).
+#
+# Get IDs by enabling Developer Mode in Discord (Settings -> Advanced),
+# then right-click a server/channel -> Copy ID.
+
+guilds:
+  - id: 123456789012345678
+    name: "My Server"
+    channels:
+      - 234567890123456789   # #bot-commands
+  - id: 987654321098765432
+    name: "Another Server (all channels allowed)"
+    channels: []
