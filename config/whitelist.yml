@@ -2,13 +2,13 @@
 # for documentation of every field.
 
 guilds:
-  - id: 123456789012345678
-    name: "My Server"
+  - id: 1047630157323714652
+    name: "Wezla's Apps"
     channels:
-      - 234567890123456789   # #bot-commands
-  - id: 987654321098765432
-    name: "Another Server (all channels allowed)"
-    channels: []
+      - 1055697160139714661   # #bot-commands
+  # - id: 987654321098765432
+  #   name: "Another Server (all channels allowed)"
+  #   channels: []
 
 # Containers /restart is allowed to touch. Each entry is a regex that must
 # match the FULL container name, e.g.:

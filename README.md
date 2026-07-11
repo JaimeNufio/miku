@@ -52,14 +52,41 @@ bypassable). Instead, `/restart` is limited by two independent gates:
    ```
    Slash commands are synced only to whitelisted guilds; non-whitelisted
    channels get a polite refusal.
-4. Run:
+4. Optionally hide containers from `/containers`, `/container`, and
+   `/restart` autocomplete (gitignored, like `whitelist.yml`):
    ```sh
-   docker compose up --build -d
-   docker compose logs -f bot
+   cp config/blacklist.example.yml config/blacklist.yml
+   # edit it: Docker labels ("key=value" or bare "key") to hide by
+   ```
+   A container is dropped only if it carries one of these labels — labels
+   are set at creation time, so this hides containers you've deliberately
+   labeled going forward, not arbitrary pre-existing unlabeled ones.
+5. Run:
+   ```sh
+   make up
+   make logs
    ```
 
 The whitelist is mounted read-only into the container; after editing it,
-`docker compose restart bot` picks up changes.
+`make restart` picks up changes.
+
+## Makefile
+
+| Target | Description |
+| --- | --- |
+| `make up` | Build and start all containers in the background |
+| `make down` | Stop and remove containers |
+| `make build` | Build images without starting |
+| `make restart` | Restart the bot container |
+| `make logs` | Tail the bot's logs |
+| `make ps` | Show container status |
+| `make sync` | Install/update local Python deps from `uv.lock` |
+| `make lock` | Regenerate `uv.lock` after editing `pyproject.toml` |
+
+Dependencies are managed with [uv](https://docs.astral.sh/uv/): edit
+`pyproject.toml`, run `make lock`, and commit the updated `uv.lock`. The
+Docker image installs from the lockfile directly, so no local Python
+environment is required just to run the bot.
 
 ## Commands
 

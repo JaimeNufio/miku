@@ -1,0 +1,13 @@
+# Copy to config/blacklist.yml (gitignored, like whitelist.yml). Hides
+# containers from /containers, /container, and /restart autocomplete.
+#
+# Each entry is a Docker label, either "key=value" (label must have that
+# exact value) or bare "key" (label present, any value). A container
+# matching any entry here is dropped from the results.
+#
+# Docker labels are set at container-creation time and can't be added to an
+# already-running container without recreating it — so this only hides
+# containers you deliberately label, not arbitrary pre-existing ones (e.g.
+# stray `docker run` containers with no labels at all).
+excluded_labels:
+  - com.docker.compose.service=miku

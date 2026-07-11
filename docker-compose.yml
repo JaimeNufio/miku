@@ -1,3 +1,5 @@
+name: miku
+
 services:
   bot:
     build: .
@@ -8,6 +10,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       DOCKER_HOST: tcp://docker-proxy:2375
       WHITELIST_PATH: /app/config/whitelist.yml
+      BLACKLIST_PATH: /app/config/blacklist.yml
     volumes:
       - ./config:/app/config:ro
     depends_on:
@@ -46,6 +49,7 @@ services:
     restart: unless-stopped
     environment:
       CONTAINERS: 1
+      IMAGES: 1
       POST: 0
       ALLOW_RESTARTS: 1
     volumes:

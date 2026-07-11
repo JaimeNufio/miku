@@ -1,5 +1,6 @@
 .env
 config/whitelist.yml
+config/blacklist.yml
 __pycache__/
 *.pyc
 .venv/

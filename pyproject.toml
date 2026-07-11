@@ -1,0 +1,10 @@
+[project]
+name = "miku"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.29",
+    "discord-py>=2.4,<3.0",
+    "docker>=7.1",
+    "pyyaml>=6.0",
+]

@@ -14,6 +14,8 @@ from dataclasses import dataclass
 
 import docker
 
+from bot.config import Blacklist
+
 
 @dataclass(frozen=True)
 class ContainerStatus:
@@ -25,8 +27,9 @@ class ContainerStatus:
 
 
 class DockerMonitor:
-    def __init__(self, docker_host: str) -> None:
+    def __init__(self, docker_host: str, blacklist: Blacklist = Blacklist()) -> None:
         self._client = docker.DockerClient(base_url=docker_host, timeout=10)
+        self._blacklist = blacklist
 
     async def ping(self) -> bool:
         return await asyncio.to_thread(self._client.ping)
@@ -57,7 +60,18 @@ class DockerMonitor:
 
     def _list_containers_sync(self) -> list[ContainerStatus]:
         containers = self._client.containers.list(all=True)
+        containers = [c for c in containers if not self._blacklist.hides(self._labels(c))]
         return sorted((self._to_status(c) for c in containers), key=lambda c: c.name)
+
+    @staticmethod
+    def _labels(container: docker.models.containers.Container) -> dict[str, str]:
+        # list-summary attrs put labels at the top level; inspect attrs nest
+        # them under Config. Same split as the Status/State handling below.
+        attrs = container.attrs
+        labels = attrs.get("Labels")
+        if isinstance(labels, dict):
+            return labels
+        return (attrs.get("Config") or {}).get("Labels") or {}
 
     @staticmethod
     def _to_status(container: docker.models.containers.Container) -> ContainerStatus:

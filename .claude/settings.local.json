@@ -3,7 +3,19 @@
     "allow": [
       "Bash(docker compose *)",
       "Bash(python3 -c ' *)",
-      "Bash(python3 -m py_compile bot/config.py bot/cogs/containers.py)"
+      "Bash(python3 -m py_compile bot/config.py bot/cogs/containers.py)",
+      "Bash(awk -F= '{if \\($2==\"\"\\) print $1 \" is EMPTY\"}' /home/jnufio/Projects/miku/.env)",
+      "Bash(python3 -m pip --version)",
+      "Bash(curl -LsSf https://astral.sh/uv/install.sh)",
+      "Bash(sh)",
+      "Bash(rm requirements.txt && cat .dockerignore)",
+      "Bash(docker version *)",
+      "Bash(groups; ls *)",
+      "Read(//run/**)",
+      "Bash(sudo -n docker build -t miku-test .)"
+    ],
+    "additionalDirectories": [
+      "/home/jnufio/Projects/miku"
     ]
   }
 }
