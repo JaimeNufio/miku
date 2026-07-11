@@ -7,18 +7,23 @@ visibility into the host's Docker containers.
 
 Four containers, defined in [docker-compose.yml](docker-compose.yml):
 
-- **config-init** — one-shot; seeds `config/whitelist.yml` and
-  `config/blacklist.yml` from their `.example.yml` counterparts if they
-  don't exist yet (e.g. deploying via Portainer, where there's no shell to
-  run `cp` by hand). Needs read-write access to do that, so it's a separate
-  container from **bot**, which keeps its own mount of the same directory
-  read-only. This only seeds placeholder content — `whitelist.yml` still
-  needs your real guild ID edited in before slash commands will sync (see
-  Setup below); the container won't crash-loop without editing it, but
-  commands won't work in your server either until you do.
+- **config-init** — one-shot; seeds `whitelist.yml` and `blacklist.yml` into
+  the `configdata` named volume from the `.example.yml` files baked into the
+  image, if they don't exist yet. `configdata` isn't a host bind mount — no
+  path to configure in Portainer, and nothing depends on a host directory
+  existing before first boot. Runs as root (the volume is root-owned until
+  something writes to it); **bot** mounts the same volume read-only. This
+  only seeds placeholder content — `whitelist.yml` still needs your real
+  guild ID before slash commands will sync (see Setup below); the container
+  won't crash-loop without that edit, but commands won't work in your
+  server either until you do it. See `make push-whitelist` below for how to
+  actually get an edit into the volume.
 - **bot** — the discord.py app. Talks to Postgres for storage and to the
   socket proxy for container info.
-- **postgres** — Postgres 16 with a named volume for persistence.
+- **postgres** — Postgres 16. Data dir defaults to a named volume (`pgdata`,
+  Docker-managed); set `POSTGRES_DATA_DIR` to an absolute host path instead
+  if you want it somewhere visible/backuppable (e.g. Portainer's
+  Environment variables field: `POSTGRES_DATA_DIR=/mnt/data/miku/postgres`).
 - **docker-proxy** — [tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy).
   The host's Docker socket is mounted only here. The proxy allows read (GET)
   container endpoints plus restart/stop/kill (`ALLOW_RESTARTS=1`); all other
@@ -55,33 +60,38 @@ bypassable). Instead, `/restart` is limited by two independent gates:
    ```sh
    # edit .env: set DISCORD_TOKEN and a real POSTGRES_PASSWORD
    ```
-3. Configure the whitelist (gitignored, like `.env`). `config-init` seeds
-   `config/whitelist.yml` from `config/whitelist.example.yml` on first boot
-   if it's missing — but the seeded version has placeholder guild IDs, so
-   edit it before slash commands will sync anywhere real:
+3. Configure the whitelist. `whitelist.yml`/`blacklist.yml` live in the
+   `configdata` named volume, not a plain host file, so there's a local
+   working copy (gitignored, like `.env`) you edit and then push in:
    ```sh
+   cp config/whitelist.example.yml config/whitelist.yml   # (make push-whitelist does this too, if missing)
    # edit config/whitelist.yml: your guild ID, optional channel IDs, restartable containers
+   make push-whitelist   # copies it into the running volume + restarts the bot
    ```
    Slash commands are synced only to whitelisted guilds; non-whitelisted
    channels get a polite refusal.
 4. Optionally hide containers from `/containers`, `/container`, and
-   `/restart` autocomplete. Same auto-seeding applies to
-   `config/blacklist.yml`; the seeded default (`excluded_labels: []`) hides
-   nothing, so this step only matters if you want to change that:
+   `/restart` autocomplete the same way:
    ```sh
+   cp config/blacklist.example.yml config/blacklist.yml   # (make push-blacklist does this too, if missing)
    # edit config/blacklist.yml: Docker labels ("key=value" or bare "key") to hide by
+   make push-blacklist
    ```
-   A container is dropped only if it carries one of these labels — labels
-   are set at creation time, so this hides containers you've deliberately
-   labeled going forward, not arbitrary pre-existing unlabeled ones.
+   The seeded default (`excluded_labels: []`) hides nothing, so this step
+   only matters if you want to change that. A container is dropped only if
+   it carries one of these labels — labels are set at creation time, so
+   this hides containers you've deliberately labeled going forward, not
+   arbitrary pre-existing unlabeled ones.
 5. Run:
    ```sh
    make up
    make logs
    ```
 
-The whitelist is mounted read-only into the container; after editing it,
-`make restart` picks up changes.
+`config-init` seeds `whitelist.yml`/`blacklist.yml` into the volume with
+placeholder content on first boot, so `make up` won't crash-loop even
+before you've run `make push-whitelist` — but slash commands won't sync
+anywhere real until you do.
 
 ## Makefile
 
@@ -94,6 +104,8 @@ The whitelist is mounted read-only into the container; after editing it,
 | `make cycle` | Full stop + rebuild + start (`down` then `up`) |
 | `make logs` | Tail the bot's logs |
 | `make ps` | Show container status |
+| `make push-whitelist` | Copy local `config/whitelist.yml` into the `configdata` volume and restart the bot |
+| `make push-blacklist` | Same, for `config/blacklist.yml` |
 | `make sync` | Install/update local Python deps from `uv.lock` |
 | `make lock` | Regenerate `uv.lock` after editing `pyproject.toml` |
 

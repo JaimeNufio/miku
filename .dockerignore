@@ -5,8 +5,7 @@
 __pycache__
 *.pyc
 .venv
-config/
+config/*
+!config/*.example.yml
 README.md
 docker-compose.yml
-whitelist.yml
-blacklist.yml

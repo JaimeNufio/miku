@@ -14,6 +14,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked
 
 COPY bot/ ./bot/
+COPY config/*.example.yml ./config-defaults/
 
 RUN useradd --create-home --shell /usr/sbin/nologin miku && \
     chown -R miku:miku /app

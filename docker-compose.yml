@@ -1,21 +1,22 @@
 name: miku
 
 services:
-  # One-shot: seeds config/whitelist.yml and config/blacklist.yml from their
-  # .example.yml counterparts on first boot, if they don't exist yet. Needs
-  # read-write access to do that, so it's split out from the bot service,
-  # which keeps its own mount of the same directory read-only.
+  # One-shot: seeds whitelist.yml and blacklist.yml into the configdata
+  # volume from the .example.yml files baked into the image (see
+  # Dockerfile), if they don't exist yet. Runs as root (overriding the
+  # image's default miku user) since a fresh named volume is root-owned
+  # until something writes to it. bot mounts the same volume read-only.
   config-init:
-    image: alpine:3
+    build: .
     container_name: miku-config-init
+    user: "0:0"
     volumes:
-      - ./config:/config
+      - configdata:/app/config
+    entrypoint: ["sh", "-c"]
     command:
-      - sh
-      - -c
       - |
-        [ -f /config/whitelist.yml ] || cp /config/whitelist.example.yml /config/whitelist.yml
-        [ -f /config/blacklist.yml ] || cp /config/blacklist.example.yml /config/blacklist.yml
+        [ -f /app/config/whitelist.yml ] || cp /app/config-defaults/whitelist.example.yml /app/config/whitelist.yml
+        [ -f /app/config/blacklist.yml ] || cp /app/config-defaults/blacklist.example.yml /app/config/blacklist.yml
 
   bot:
     build: .
@@ -29,7 +30,7 @@ services:
       WHITELIST_PATH: /app/config/whitelist.yml
       BLACKLIST_PATH: /app/config/blacklist.yml
     volumes:
-      - ./config:/app/config:ro
+      - configdata:/app/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +48,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_DIR:-pgdata}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -75,4 +76,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
 volumes:
+  configdata:
   pgdata:
