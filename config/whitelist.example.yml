@@ -26,3 +26,9 @@ guilds:
 # TEMPORARY: empty/omitted = no name restriction (the GOD_USER env var is
 # then the only gate on /restart). This will become a required list later.
 restartable_containers: []
+
+# Guild IDs where the fun message reactions (bot/cogs/reactions.py) stay
+# quiet: yes/no/ahh/kanye reacts and the "cum" joke reply are suppressed.
+# Birthday-wish replies (happy/hbd/bday/congrats/feliz) always fire
+# regardless. Omit/empty = reactions active everywhere.
+reaction_silent_guilds: []

@@ -18,3 +18,5 @@ guilds:
 # then the only gate on /restart). This will become a required list later.
 restartable_containers: []
 
+reaction_silent_guilds: []
+

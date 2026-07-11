@@ -98,10 +98,26 @@ environment is required just to run the bot.
 | `/restart <name>` | Restart a container matching the restart whitelist (Manage Server by default) |
 | `/stats` | Command usage counts for the server, from Postgres |
 
+## Reactions
+
+Passive, non-command message watching (requires the **Message Content**
+privileged intent, enabled in the Discord Developer Portal under Bot):
+
+| Trigger | Response |
+| --- | --- |
+| Message is exactly `yes`/`no` (+ one optional trailing char) | custom yes/no react |
+| Message is a scream (`ahh`, `aaahhh`, ...) | animated react |
+| Message contains `syes` or `kanye` | react |
+| Message mentions someone and contains `happy`/`hbd`/`bday`/`congrats`/`feliz` | reply with the message text + a confetti burst |
+| Message mentions someone and starts with `cum` | reply with the message text + an eggplant/water-drop burst |
+
+`reaction_silent_guilds` in `whitelist.yml` mutes everything above except the
+birthday reply for specific guilds.
+
 ## Layout
 
 - [bot/main.py](bot/main.py) — entrypoint, whitelist enforcement, guild command sync
 - [bot/config.py](bot/config.py) — env settings and whitelist loading
 - [bot/db.py](bot/db.py) — asyncpg pool, schema, queries
 - [bot/docker_client.py](bot/docker_client.py) — read-only Docker status client
-- [bot/cogs/](bot/cogs/) — slash command groups
+- [bot/cogs/](bot/cogs/) — slash command groups and passive message reactions

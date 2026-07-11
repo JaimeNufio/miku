@@ -14,7 +14,7 @@ from bot.docker_client import DockerMonitor
 
 log = logging.getLogger("miku")
 
-COGS = ("bot.cogs.general", "bot.cogs.containers")
+COGS = ("bot.cogs.general", "bot.cogs.containers", "bot.cogs.reactions")
 
 
 class WhitelistedTree(app_commands.CommandTree):
@@ -36,9 +36,11 @@ class MikuBot(commands.Bot):
     docker: DockerMonitor
 
     def __init__(self, settings: Settings, whitelist: Whitelist, blacklist: Blacklist) -> None:
+        intents = discord.Intents.default()
+        intents.message_content = True  # required to read content for reactions.py
         super().__init__(
             command_prefix=commands.when_mentioned,  # unused; slash commands only
-            intents=discord.Intents.default(),
+            intents=intents,
             tree_cls=WhitelistedTree,
         )
         self.settings = settings

@@ -55,6 +55,7 @@ class Whitelist:
 
     guilds: dict[int, frozenset[int]] = field(default_factory=dict)
     restartable: tuple[re.Pattern[str], ...] = ()
+    reaction_silent_guilds: frozenset[int] = frozenset()
 
     @classmethod
     def load(cls, path: Path) -> "Whitelist":
@@ -72,7 +73,14 @@ class Whitelist:
             )
         except re.error as exc:
             raise RuntimeError(f"Invalid regex in restartable_containers: {exc}") from exc
-        return cls(guilds=guilds, restartable=restartable)
+        reaction_silent_guilds = frozenset(
+            int(g) for g in data.get("reaction_silent_guilds") or []
+        )
+        return cls(
+            guilds=guilds,
+            restartable=restartable,
+            reaction_silent_guilds=reaction_silent_guilds,
+        )
 
     @property
     def guild_ids(self) -> list[int]:
