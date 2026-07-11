@@ -1,6 +1,22 @@
 name: miku
 
 services:
+  # One-shot: seeds config/whitelist.yml and config/blacklist.yml from their
+  # .example.yml counterparts on first boot, if they don't exist yet. Needs
+  # read-write access to do that, so it's split out from the bot service,
+  # which keeps its own mount of the same directory read-only.
+  config-init:
+    image: alpine:3
+    container_name: miku-config-init
+    volumes:
+      - ./config:/config
+    command:
+      - sh
+      - -c
+      - |
+        [ -f /config/whitelist.yml ] || cp /config/whitelist.example.yml /config/whitelist.yml
+        [ -f /config/blacklist.yml ] || cp /config/blacklist.example.yml /config/blacklist.yml
+
   bot:
     build: .
     container_name: miku-bot
@@ -19,6 +35,8 @@ services:
         condition: service_healthy
       docker-proxy:
         condition: service_started
+      config-init:
+        condition: service_completed_successfully
 
   postgres:
     image: postgres:16-alpine

@@ -1,7 +1,11 @@
-.PHONY: up down build restart logs ps sync lock
+.PHONY: up down build restart cycle logs ps sync lock
 
-up:
+up: .env
 	docker compose up --build -d
+
+.env:
+	cp .env.example .env
+	@echo "Created .env from .env.example — fill in real secrets before this matters."
 
 down:
 	docker compose down

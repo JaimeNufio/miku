@@ -5,8 +5,17 @@ visibility into the host's Docker containers.
 
 ## Architecture
 
-Three containers, defined in [docker-compose.yml](docker-compose.yml):
+Four containers, defined in [docker-compose.yml](docker-compose.yml):
 
+- **config-init** — one-shot; seeds `config/whitelist.yml` and
+  `config/blacklist.yml` from their `.example.yml` counterparts if they
+  don't exist yet (e.g. deploying via Portainer, where there's no shell to
+  run `cp` by hand). Needs read-write access to do that, so it's a separate
+  container from **bot**, which keeps its own mount of the same directory
+  read-only. This only seeds placeholder content — `whitelist.yml` still
+  needs your real guild ID edited in before slash commands will sync (see
+  Setup below); the container won't crash-loop without editing it, but
+  commands won't work in your server either until you do.
 - **bot** — the discord.py app. Talks to Postgres for storage and to the
   socket proxy for container info.
 - **postgres** — Postgres 16 with a named volume for persistence.
@@ -40,23 +49,27 @@ bypassable). Instead, `/restart` is limited by two independent gates:
 1. Create a bot in the [Discord Developer Portal](https://discord.com/developers/applications),
    copy its token, and invite it to your server with the `bot` and
    `applications.commands` scopes.
-2. Configure secrets:
+2. Configure secrets. `make up` creates `.env` from `.env.example`
+   automatically if it's missing (see the Makefile section below), but you
+   still need to edit it:
    ```sh
-   cp .env.example .env
    # edit .env: set DISCORD_TOKEN and a real POSTGRES_PASSWORD
    ```
-3. Configure the whitelist (gitignored, like `.env`):
+3. Configure the whitelist (gitignored, like `.env`). `config-init` seeds
+   `config/whitelist.yml` from `config/whitelist.example.yml` on first boot
+   if it's missing — but the seeded version has placeholder guild IDs, so
+   edit it before slash commands will sync anywhere real:
    ```sh
-   cp config/whitelist.example.yml config/whitelist.yml
-   # edit it: your guild ID, optional channel IDs, restartable containers
+   # edit config/whitelist.yml: your guild ID, optional channel IDs, restartable containers
    ```
    Slash commands are synced only to whitelisted guilds; non-whitelisted
    channels get a polite refusal.
 4. Optionally hide containers from `/containers`, `/container`, and
-   `/restart` autocomplete (gitignored, like `whitelist.yml`):
+   `/restart` autocomplete. Same auto-seeding applies to
+   `config/blacklist.yml`; the seeded default (`excluded_labels: []`) hides
+   nothing, so this step only matters if you want to change that:
    ```sh
-   cp config/blacklist.example.yml config/blacklist.yml
-   # edit it: Docker labels ("key=value" or bare "key") to hide by
+   # edit config/blacklist.yml: Docker labels ("key=value" or bare "key") to hide by
    ```
    A container is dropped only if it carries one of these labels — labels
    are set at creation time, so this hides containers you've deliberately
@@ -74,10 +87,11 @@ The whitelist is mounted read-only into the container; after editing it,
 
 | Target | Description |
 | --- | --- |
-| `make up` | Build and start all containers in the background |
+| `make up` | Create `.env` from `.env.example` if missing, then build and start all containers in the background |
 | `make down` | Stop and remove containers |
 | `make build` | Build images without starting |
 | `make restart` | Restart the bot container |
+| `make cycle` | Full stop + rebuild + start (`down` then `up`) |
 | `make logs` | Tail the bot's logs |
 | `make ps` | Show container status |
 | `make sync` | Install/update local Python deps from `uv.lock` |

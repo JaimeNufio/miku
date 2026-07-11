@@ -8,3 +8,5 @@ __pycache__
 config/
 README.md
 docker-compose.yml
+whitelist.yml
+blacklist.yml
