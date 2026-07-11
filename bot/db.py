@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
 
 import asyncpg
@@ -19,6 +20,17 @@ CREATE TABLE IF NOT EXISTS command_log (
     invoked_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS command_log_command_idx ON command_log (command);
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id          BIGSERIAL PRIMARY KEY,
+    guild_id    BIGINT NOT NULL,
+    channel_id  BIGINT NOT NULL,
+    user_id     BIGINT NOT NULL,
+    message     TEXT NOT NULL,
+    remind_at   TIMESTAMPTZ NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS reminders_remind_at_idx ON reminders (remind_at);
 """
 
 
@@ -65,3 +77,35 @@ async def command_stats(pool: asyncpg.Pool, guild_id: int, limit: int = 10) -> l
         guild_id,
         limit,
     )
+
+
+async def create_reminder(
+    pool: asyncpg.Pool,
+    guild_id: int,
+    channel_id: int,
+    user_id: int,
+    message: str,
+    remind_at: datetime.datetime,
+) -> int:
+    return await pool.fetchval(
+        """
+        INSERT INTO reminders (guild_id, channel_id, user_id, message, remind_at)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+        """,
+        guild_id,
+        channel_id,
+        user_id,
+        message,
+        remind_at,
+    )
+
+
+async def due_reminders(pool: asyncpg.Pool) -> list[asyncpg.Record]:
+    return await pool.fetch(
+        "SELECT id, channel_id, user_id, message FROM reminders WHERE remind_at <= now()"
+    )
+
+
+async def delete_reminder(pool: asyncpg.Pool, reminder_id: int) -> None:
+    await pool.execute("DELETE FROM reminders WHERE id = $1", reminder_id)

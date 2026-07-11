@@ -14,7 +14,7 @@ from bot.docker_client import DockerMonitor
 
 log = logging.getLogger("miku")
 
-COGS = ("bot.cogs.general", "bot.cogs.containers", "bot.cogs.reactions")
+COGS = ("bot.cogs.general", "bot.cogs.containers", "bot.cogs.reactions", "bot.cogs.reminders")
 
 
 class WhitelistedTree(app_commands.CommandTree):
