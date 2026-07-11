@@ -98,6 +98,7 @@ environment is required just to run the bot.
 | `/restart <name>` | Restart a container matching the restart whitelist (Manage Server by default) |
 | `/stats` | Command usage counts for the server, from Postgres |
 | `/remind-me <duration> <message>` | Set a reminder (e.g. `2 days`, `3h`, `45 minutes`); persisted in Postgres, so it survives restarts. When it fires, a new message replies to the original confirmation, pinging you |
+| `/rename <target> <nickname>` | Set another member's nickname (can't target yourself; Manage Nicknames by default) |
 
 ## Reactions
 
