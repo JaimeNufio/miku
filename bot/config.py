@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,6 +16,7 @@ class Settings:
     database_url: str
     docker_host: str
     whitelist_path: Path
+    god_user_id: int | None  # sole user allowed to run /restart; None = nobody
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -23,19 +25,34 @@ class Settings:
             database_url = os.environ["DATABASE_URL"]
         except KeyError as exc:
             raise RuntimeError(f"Missing required environment variable: {exc}") from exc
+        god_raw = os.environ.get("GOD_USER", "").strip()
+        try:
+            god_user_id = int(god_raw) if god_raw else None
+        except ValueError:
+            raise RuntimeError(
+                f"GOD_USER must be a numeric Discord user ID, got {god_raw!r}"
+            ) from None
         return cls(
             token=token,
             database_url=database_url,
             docker_host=os.environ.get("DOCKER_HOST", "unix:///var/run/docker.sock"),
             whitelist_path=Path(os.environ.get("WHITELIST_PATH", "config/whitelist.yml")),
+            god_user_id=god_user_id,
         )
 
 
 @dataclass(frozen=True)
 class Whitelist:
-    """Allowed guilds, each mapped to its allowed channel IDs (empty set = all)."""
+    """Allowed guilds/channels, and the container names /restart may touch.
+
+    guilds maps guild ID -> allowed channel IDs (empty set = all channels).
+    restartable holds compiled regexes; a container may be restarted only if
+    one of them full-matches its name. Empty = no name restriction (temporary;
+    the GOD_USER check is then the only gate on /restart).
+    """
 
     guilds: dict[int, frozenset[int]] = field(default_factory=dict)
+    restartable: tuple[re.Pattern[str], ...] = ()
 
     @classmethod
     def load(cls, path: Path) -> "Whitelist":
@@ -47,7 +64,13 @@ class Whitelist:
             guilds[guild_id] = channels
         if not guilds:
             raise RuntimeError(f"Whitelist at {path} contains no guilds")
-        return cls(guilds=guilds)
+        try:
+            restartable = tuple(
+                re.compile(p) for p in data.get("restartable_containers") or []
+            )
+        except re.error as exc:
+            raise RuntimeError(f"Invalid regex in restartable_containers: {exc}") from exc
+        return cls(guilds=guilds, restartable=restartable)
 
     @property
     def guild_ids(self) -> list[int]:
@@ -58,3 +81,10 @@ class Whitelist:
             return False
         allowed_channels = self.guilds[guild_id]
         return not allowed_channels or channel_id in allowed_channels
+
+    def can_restart(self, container_name: str) -> bool:
+        # TODO: make a non-empty whitelist mandatory again. Blank currently
+        # means "no name restriction" — the GOD_USER gate is the only guard.
+        if not self.restartable:
+            return True
+        return any(p.fullmatch(container_name) for p in self.restartable)

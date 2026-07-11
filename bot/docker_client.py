@@ -1,8 +1,10 @@
-"""Read-only view of host containers via the docker-socket-proxy.
+"""Host container access via the docker-socket-proxy.
 
 The docker SDK is synchronous, so every call is pushed off the event loop
-with asyncio.to_thread. All access goes through the proxy, which only
-permits GET requests on container endpoints — writes are impossible.
+with asyncio.to_thread. All access goes through the proxy, which permits
+GET container endpoints plus restart/stop/kill (ALLOW_RESTARTS) and denies
+every other write. The proxy grants restart on ALL containers; per-name
+restrictions are the caller's job (Whitelist.can_restart).
 """
 
 from __future__ import annotations
@@ -37,6 +39,20 @@ class DockerMonitor:
             container = await asyncio.to_thread(self._client.containers.get, name)
         except docker.errors.NotFound:
             return None
+        return self._to_status(container)
+
+    async def restart_container(self, name: str) -> ContainerStatus | None:
+        """Restart a container and return its post-restart status.
+
+        Returns None if no such container exists. Callers must check the
+        restart whitelist first; this method does not.
+        """
+        try:
+            container = await asyncio.to_thread(self._client.containers.get, name)
+        except docker.errors.NotFound:
+            return None
+        await asyncio.to_thread(container.restart, timeout=10)
+        await asyncio.to_thread(container.reload)
         return self._to_status(container)
 
     def _list_containers_sync(self) -> list[ContainerStatus]:

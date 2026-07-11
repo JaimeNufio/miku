@@ -32,9 +32,14 @@ services:
       timeout: 5s
       retries: 10
 
-  # Read-only gateway to the host Docker daemon. Only GET endpoints for
-  # containers are exposed (POST/PUT/DELETE are denied by default), so the
-  # bot can inspect container state but can never start/stop/remove anything.
+  # Gateway to the host Docker daemon. GET container endpoints plus
+  # restart/stop/kill are exposed; every other write stays denied, so the
+  # bot can never create, remove, or exec into anything.
+  #
+  # ALLOW_RESTARTS applies to ALL containers — the proxy cannot filter by
+  # name (the API accepts IDs interchangeably, so path matching on names
+  # would be bypassable). The per-name regex whitelist is enforced by the
+  # bot; see restartable_containers in config/whitelist.yml.
   docker-proxy:
     image: tecnativa/docker-socket-proxy:latest
     container_name: miku-docker-proxy
@@ -42,6 +47,7 @@ services:
     environment:
       CONTAINERS: 1
       POST: 0
+      ALLOW_RESTARTS: 1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 

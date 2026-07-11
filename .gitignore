@@ -1,4 +1,5 @@
 .env
+config/whitelist.yml
 __pycache__/
 *.pyc
 .venv/

@@ -1,12 +1,5 @@
-# Guilds and channels the bot will respond in.
-#
-# - Slash commands are synced only to the guilds listed here.
-# - If a guild's `channels` list is empty or omitted, every channel in that
-#   guild is allowed. Otherwise only the listed channel IDs are allowed.
-# - `name` fields are informational only (for humans reading this file).
-#
-# Get IDs by enabling Developer Mode in Discord (Settings -> Advanced),
-# then right-click a server/channel -> Copy ID.
+# Local whitelist — gitignored, like .env. See config/whitelist.example.yml
+# for documentation of every field.
 
 guilds:
   - id: 123456789012345678
@@ -16,3 +9,12 @@ guilds:
   - id: 987654321098765432
     name: "Another Server (all channels allowed)"
     channels: []
+
+# Containers /restart is allowed to touch. Each entry is a regex that must
+# match the FULL container name, e.g.:
+#   - demo-.*
+#   - my-web-app
+# TEMPORARY: empty/omitted = no name restriction (the GOD_USER env var is
+# then the only gate on /restart). This will become a required list later.
+restartable_containers: []
+
