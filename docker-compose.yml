@@ -5,8 +5,9 @@ services:
     build: .
     container_name: miku-bot
     restart: unless-stopped
-    env_file: .env
     environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      GOD_USER: ${GOD_USER}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       DOCKER_HOST: tcp://docker-proxy:2375
       WHITELIST_PATH: /app/config/whitelist.yml
